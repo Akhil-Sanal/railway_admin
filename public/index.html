@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Railway Admin Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon">🚂</div>
+    <div class="brand-text">
+      <span class="brand-name">RailAdmin</span>
+      <span class="brand-sub">Control Center</span>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <a class="nav-item active" data-page="dashboard" href="#">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </a>
+    <a class="nav-item" data-page="transactions" href="#">
+      <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      Transactions
+    </a>
+    <a class="nav-item" data-page="analytics" href="#">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Analytics
+    </a>
+    <a class="nav-item" data-page="reports" href="#">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Reports
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="admin-badge">
+      <div class="admin-avatar">A</div>
+      <div>
+        <div class="admin-name">Administrator</div>
+        <div class="admin-role">Super Admin</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- Main Content -->
+<main class="main">
+  <!-- Top Bar -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="menu-toggle" id="menuToggle">
+        <svg viewBox="0 0 24 24" width="22" height="22"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="page-title" id="pageTitle">Dashboard</div>
+    </div>
+    <div class="topbar-right">
+      <div class="clock" id="clock"></div>
+      <div class="db-status" id="dbStatus">
+        <span class="status-dot"></span> Connected
+      </div>
+    </div>
+  </header>
+
+  <!-- Pages -->
+  <div class="content" id="content">
+
+    <!-- DASHBOARD PAGE -->
+    <div class="page active" id="page-dashboard">
+      <div class="kpi-grid" id="kpiGrid">
+        <div class="kpi-card loading"><div class="kpi-shimmer"></div></div>
+        <div class="kpi-card loading"><div class="kpi-shimmer"></div></div>
+        <div class="kpi-card loading"><div class="kpi-shimmer"></div></div>
+        <div class="kpi-card loading"><div class="kpi-shimmer"></div></div>
+      </div>
+
+      <div class="chart-row">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Spending by Department</h3>
+            <span class="chart-badge">Bar</span>
+          </div>
+          <div class="chart-wrap" style="height:280px">
+            <canvas id="deptChart" role="img" aria-label="Bar chart of spending by department"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Category Breakdown</h3>
+            <span class="chart-badge">Doughnut</span>
+          </div>
+          <div class="chart-wrap" style="height:280px">
+            <canvas id="catChart" role="img" aria-label="Doughnut chart of category breakdown"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-card full-width">
+        <div class="chart-header">
+          <h3>Department vs Category Matrix</h3>
+          <span class="chart-badge">Grouped Bar</span>
+        </div>
+        <div class="chart-wrap" style="height:300px">
+          <canvas id="matrixChart" role="img" aria-label="Grouped bar chart of department vs category spending"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRANSACTIONS PAGE -->
+    <div class="page" id="page-transactions">
+      <div class="filter-bar">
+        <div class="filter-group">
+          <input type="text" class="filter-input" id="searchInput" placeholder="🔍 Search employee, dept, items…" />
+        </div>
+        <div class="filter-group">
+          <select class="filter-select" id="deptFilter">
+            <option value="">All Departments</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <select class="filter-select" id="catFilter">
+            <option value="">All Categories</option>
+          </select>
+        </div>
+        <button class="btn-clear" id="clearFilters">Clear</button>
+      </div>
+
+      <div class="table-card">
+        <div class="table-meta">
+          <span id="tableInfo">Loading…</span>
+          <div class="pagination" id="pagination"></div>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table" id="txTable">
+            <thead>
+              <tr>
+                <th>#TID</th>
+                <th>Employee</th>
+                <th>Department</th>
+                <th>Category</th>
+                <th>Items</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody id="txBody">
+              <tr><td colspan="6" class="loading-row">Loading transactions…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANALYTICS PAGE -->
+    <div class="page" id="page-analytics">
+      <div class="analytics-grid">
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Top Spending Departments</h3>
+          </div>
+          <div class="chart-wrap" style="height:320px">
+            <canvas id="deptBarH" role="img" aria-label="Horizontal bar chart of top spending departments"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Category Share</h3>
+          </div>
+          <div class="chart-wrap" style="height:320px">
+            <canvas id="catPie" role="img" aria-label="Pie chart of category spending share"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-card full-width">
+        <div class="chart-header">
+          <h3>Top 10 Employees by Spend</h3>
+        </div>
+        <div id="empList" class="emp-list"></div>
+      </div>
+
+      <div class="chart-card full-width">
+        <div class="chart-header">
+          <h3>Department × Category Spend Matrix</h3>
+          <span class="chart-badge">Interactive</span>
+        </div>
+        <div id="heatmapWrap" class="heatmap-wrap"></div>
+      </div>
+    </div>
+
+    <!-- REPORTS PAGE -->
+    <div class="page" id="page-reports">
+      <div class="reports-hero">
+        <div class="reports-icon">📊</div>
+        <h2>Download Reports</h2>
+        <p>Export full transaction data, department summaries, and category breakdowns.</p>
+      </div>
+
+      <div class="report-cards">
+        <div class="report-card">
+          <div class="report-type pdf">
+            <svg viewBox="0 0 24 24" width="32" height="32"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
+          </div>
+          <h3>PDF Report</h3>
+          <p>Full formatted report with tables for transactions, departments, and categories. Ready to print.</p>
+          <div class="report-filters">
+            <select class="filter-select sm" id="pdfDept"><option value="">All Departments</option></select>
+            <select class="filter-select sm" id="pdfCat"><option value="">All Categories</option></select>
+          </div>
+          <button class="btn-download pdf-btn" id="downloadPdf">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download PDF
+          </button>
+        </div>
+
+        <div class="report-card">
+          <div class="report-type excel">
+            <svg viewBox="0 0 24 24" width="32" height="32"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="9"/></svg>
+          </div>
+          <h3>Excel Report</h3>
+          <p>Multi-sheet Excel workbook with transactions, department summary, and category analysis tabs.</p>
+          <div class="report-filters">
+            <select class="filter-select sm" id="xlsDept"><option value="">All Departments</option></select>
+            <select class="filter-select sm" id="xlsCat"><option value="">All Categories</option></select>
+          </div>
+          <button class="btn-download excel-btn" id="downloadExcel">
+            <svg viewBox="0 0 24 24" width="16" height="16"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download Excel
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<!-- Transaction Detail Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="txModal">
+    <div class="modal-header">
+      <h3>Transaction Detail</h3>
+      <button class="modal-close" id="modalClose">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+</body>
+</html>
