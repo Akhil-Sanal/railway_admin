@@ -1,30 +1,50 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-app.use(cors());
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Routes
-const transactionRoutes = require('./routes/transactions');
-const analyticsRoutes = require('./routes/analytics');
-const reportRoutes = require('./routes/reports');
-
-app.use('/api/transactions', transactionRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/reports', reportRoutes);
-
-// Serve index.html for all other routes
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// GET Category Balances
+app.get('/api/balances', async (req, res) => {
+  try {
+    const [rows] = await pool.query("SELECT cat_id, name, balance FROM account ORDER BY cat_id");
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.listen(PORT, () => {
-  console.log(`\n🚂 Railway Admin Server running at http://localhost:${PORT}`);
-  console.log(`📊 Dashboard: http://localhost:${PORT}\n`);
+// GET Transactions (with Emp ID)
+app.get('/api/transactions', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 15;
+    const offset = (page - 1) * limit;
+
+    const [rows] = await pool.query(`
+      SELECT 
+        t.tid, t.items, t.amount, t.empid,
+        e.Name as employee_name,
+        d.Name as dept_name,
+        a.name as category_name
+      FROM transaction t
+      JOIN employee e ON t.empid = e.empid
+      JOIN department d ON e.deptid = d.deptid
+      JOIN account a ON t.cat_id = a.cat_id
+      ORDER BY t.tid DESC
+      LIMIT ? OFFSET ?
+    `, [limit, offset]);
+
+    const [[{ total }]] = await pool.query("SELECT COUNT(*) as total FROM transaction");
+
+    res.json({ data: rows, total, page, limit });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Meta data for filters
+app.get('/api/transactions/meta/departments', async (req, res) => {
+  const [rows] = await pool.query("SELECT deptid, Name FROM department ORDER BY Name");
+  res.json(rows);
+});
+
+app.get('/api/transactions/meta/categories', async (req, res) => {
+  const [rows] = await pool.query("SELECT cat_id, name FROM account ORDER BY name");
+  res.json(rows);
 });
