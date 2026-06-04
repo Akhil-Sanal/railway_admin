@@ -34,6 +34,12 @@
       <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
       Analytics
     </a>
+<a class="nav-item" data-page="balances" href="#">
+  <svg viewBox="0 0 24 24">
+    <path d="M3 7h18M3 12h18M3 17h18"/>
+  </svg>
+  Balances
+</a>
     <a class="nav-item" data-page="reports" href="#">
       <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
       Reports
@@ -142,6 +148,7 @@
             <thead>
               <tr>
                 <th>#TID</th>
+		<th>Emp ID</th>
                 <th>Employee</th>
                 <th>Department</th>
                 <th>Category</th>
@@ -150,7 +157,7 @@
               </tr>
             </thead>
             <tbody id="txBody">
-              <tr><td colspan="6" class="loading-row">Loading transactions…</td></tr>
+              <tr><td colspan="7" class="loading-row">Loading transactions…</td></tr>
             </tbody>
           </table>
         </div>
@@ -193,6 +200,44 @@
         <div id="heatmapWrap" class="heatmap-wrap"></div>
       </div>
     </div>
+<!-- BALANCES PAGE -->
+<div class="page" id="page-balances">
+
+  <div class="chart-card">
+
+    <div class="chart-header">
+      <h3>Available Balance by Category</h3>
+    </div>
+
+    <div class="table-scroll">
+
+      <table class="data-table">
+
+        <thead>
+          <tr>
+            <th>Category ID</th>
+            <th>Category Name</th>
+            <th>Balance</th>
+          </tr>
+        </thead>
+
+        <tbody id="balanceBody">
+
+          <tr>
+            <td colspan="3" class="loading-row">
+              Loading balances...
+            </td>
+          </tr>
+
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+
+</div>
 
     <!-- REPORTS PAGE -->
     <div class="page" id="page-reports">

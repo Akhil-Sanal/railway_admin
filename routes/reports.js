@@ -220,4 +220,25 @@ router.get('/excel', async (req, res) => {
   }
 });
 
+
+router.get('/balances', async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT
+        cat_id,
+        name,
+        balance
+      FROM account
+      ORDER BY name
+    `);
+
+    res.json(rows);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: 'Database Error'
+    });
+  }
+});
 module.exports = router;

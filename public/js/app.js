@@ -49,12 +49,20 @@ function navigateTo(page) {
   state.page = page;
   document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === page));
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + page));
-  const titles = { dashboard: 'Dashboard', transactions: 'Transactions', analytics: 'Analytics', reports: 'Reports' };
+  const titles = {
+  dashboard: 'Dashboard',
+  transactions: 'Transactions',
+  analytics: 'Analytics',
+  balances: 'Balances',
+  reports: 'Reports'
+};
   $('pageTitle').textContent = titles[page] || page;
 
   if (page === 'dashboard' && !state.dashLoaded) loadDashboard();
   if (page === 'transactions' && !state.txLoaded) loadTransactionMeta();
   if (page === 'analytics' && !state.analyticsLoaded) loadAnalytics();
+if (page === 'balances')
+    loadBalances();
   if (page === 'reports') loadReportFilters();
 }
 
@@ -262,7 +270,8 @@ function renderTransactionRows(rows) {
   $('txBody').innerHTML = rows.map(r => `
     <tr onclick="openModal(${r.tid})">
       <td><span class="tid-badge">#${r.tid}</span></td>
-      <td>${escHtml(r.employee_name)}</td>
+<td>${r.empid}</td>
+<td>${escHtml(r.employee_name)}</td>
       <td><span class="dept-tag">${escHtml(r.dept_name)}</span></td>
       <td><span class="cat-tag">${escHtml(r.category_name)}</span></td>
       <td><span class="items-text" title="${escHtml(r.items || '')}">${escHtml((r.items || '').substring(0, 50))}${r.items?.length > 50 ? '…' : ''}</span></td>
@@ -503,6 +512,33 @@ $('downloadExcel').addEventListener('click', () => {
 });
 
 // ===== HELPERS =====
+async function loadBalances() {
+
+ const data = await api('/reports/balances');
+
+  if (!data || !data.length) {
+
+    $('balanceBody').innerHTML = `
+      <tr>
+        <td colspan="3" class="loading-row">
+          No balances found
+        </td>
+      </tr>
+    `;
+
+    return;
+  }
+
+  $('balanceBody').innerHTML = data.map(r => `
+
+    <tr>
+      <td>${r.cat_id}</td>
+      <td>${escHtml(r.name)}</td>
+      <td class="amount-cell">${fmt(r.balance)}</td>
+    </tr>
+
+  `).join('');
+}
 function escHtml(str) {
   if (str == null) return '';
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
