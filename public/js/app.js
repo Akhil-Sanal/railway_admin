@@ -1,145 +1,110 @@
-// ===== STATE =====
-const state = {
-  page: 'dashboard',
-  tx: { page: 1, limit: 15, dept: '', cat: '', search: '', total: 0 }
-};
+const express = require('express');
+const router = express.Router();
+const db = require('../db');
 
-// ===== UTILS =====
-const $ = id => document.getElementById(id);
-const fmt = n => '₹' + Number(n).toLocaleString('en-IN');
-const fmtK = n => n >= 1e7 ? '₹' + (n/1e7).toFixed(1) + 'Cr' : n >= 1e5 ? '₹' + (n/1e5).toFixed(1) + 'L' : '₹' + Number(n).toLocaleString('en-IN');
-
-async function api(path) {
+// Summary KPIs
+router.get('/summary', async (req, res) => {
   try {
-    const r = await fetch('/api' + path);
-    if (!r.ok) throw new Error(await r.text());
-    return await r.json();
-  } catch (e) {
-    console.error('API Error:', path, e);
-    return null;
+    const [[totals]] = await db.query(`
+      SELECT 
+        COUNT(*) AS total_transactions,
+        COALESCE(SUM(amount), 0) AS total_amount,
+        COUNT(DISTINCT empid) AS active_employees,
+        COUNT(DISTINCT cat_id) AS categories_used
+      FROM transaction
+    `);
+    const [[deptCount]] = await db.query('SELECT COUNT(*) AS total FROM department');
+    res.json({ ...totals, total_departments: deptCount.total });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-}
-
-// ===== CLOCK =====
-function updateClock() {
-  const now = new Date();
-  $('clock').textContent = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-}
-setInterval(updateClock, 1000);
-updateClock();
-
-// ===== NAVIGATION =====
-document.querySelectorAll('.nav-item').forEach(item => {
-  item.addEventListener('click', e => {
-    e.preventDefault();
-    navigateTo(item.dataset.page);
-  });
 });
 
-$('menuToggle').addEventListener('click', () => {
-  document.getElementById('sidebar').classList.toggle('open');
+// Spending by department
+router.get('/by-department', async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        d.deptid,
+        d.Name AS dept_name,
+        COUNT(t.tid) AS transaction_count,
+        COALESCE(SUM(t.amount), 0) AS total_amount
+      FROM department d
+      LEFT JOIN employee e ON d.deptid = e.deptid
+      LEFT JOIN transaction t ON e.empid = t.empid
+      GROUP BY d.deptid, d.Name
+      ORDER BY total_amount DESC
+    `);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-function navigateTo(page) {
-  state.page = page;
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === page));
-  document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + page));
-  
-  const titles = {
-    dashboard: 'Dashboard',
-    transactions: 'Transactions',
-    balances: 'Balances',
-    analytics: 'Analytics',
-    reports: 'Reports'
-  };
-  $('pageTitle').textContent = titles[page] || page;
-
-  if (page === 'transactions') loadTransactionsPage();
-  if (page === 'balances') loadBalances();
-}
-
-// ===== BALANCES =====
-async function loadBalances() {
-  const data = await api('/balances');
-  const tbody = $('balanceBody');
-
-  if (!data || data.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" class="loading-row">No balance records found.</td></tr>`;
-    return;
+// Spending by category
+router.get('/by-category', async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        a.cat_id,
+        a.name AS category_name,
+        a.balance,
+        COUNT(t.tid) AS transaction_count,
+        COALESCE(SUM(t.amount), 0) AS total_amount
+      FROM account a
+      LEFT JOIN transaction t ON a.cat_id = t.cat_id
+      GROUP BY a.cat_id, a.name, a.balance
+      ORDER BY total_amount DESC
+    `);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
+});
 
-  tbody.innerHTML = data.map(b => `
-    <tr>
-      <td><strong>${b.cat_id}</strong></td>
-      <td>${escHtml(b.name)}</td>
-      <td class="amount-cell">${fmt(b.balance)}</td>
-      <td>
-        <span class="dept-tag" style="background:${b.balance > 50000 ? '#e6f4ea' : '#fee2e2'}; color:${b.balance > 50000 ? '#1a6b3a' : '#c53030'}">
-          ${b.balance > 50000 ? 'Healthy' : 'Low'}
-        </span>
-      </td>
-    </tr>
-  `).join('');
-}
-
-// ===== TRANSACTIONS =====
-async function loadTransactionsPage() {
-  const [depts, cats] = await Promise.all([
-    api('/transactions/meta/departments'),
-    api('/transactions/meta/categories')
-  ]);
-
-  // Populate filters
-  const deptSel = $('deptFilter');
-  const catSel = $('catFilter');
-  depts?.forEach(d => deptSel.insertAdjacentHTML('beforeend', `<option value="${d.deptid}">${d.Name}</option>`));
-  cats?.forEach(c => catSel.insertAdjacentHTML('beforeend', `<option value="${c.cat_id}">${c.name}</option>`));
-
-  loadTransactions();
-}
-
-async function loadTransactions() {
-  const { page, limit, dept, cat, search } = state.tx;
-  const params = new URLSearchParams({ page, limit });
-  if (dept) params.append('dept', dept);
-  if (cat) params.append('category', cat);
-  if (search) params.append('search', search);
-
-  $('txBody').innerHTML = '<tr><td colspan="7" class="loading-row">Loading transactions...</td></tr>';
-
-  const data = await api('/transactions?' + params.toString());
-  if (!data) {
-    $('txBody').innerHTML = '<tr><td colspan="7" class="loading-row" style="color:red">Failed to load data</td></tr>';
-    return;
+// Dept vs Category heatmap data
+router.get('/dept-category', async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        d.Name AS dept_name,
+        a.name AS category_name,
+        COUNT(t.tid) AS transaction_count,
+        COALESCE(SUM(t.amount), 0) AS total_amount
+      FROM department d
+      JOIN employee e ON d.deptid = e.deptid
+      JOIN transaction t ON e.empid = t.empid
+      JOIN account a ON t.cat_id = a.cat_id
+      GROUP BY d.Name, a.name
+      ORDER BY total_amount DESC
+    `);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
+});
 
-  renderTransactionRows(data.data || []);
-  $('tableInfo').textContent = `Showing ${data.data?.length || 0} transactions`;
-}
-
-function renderTransactionRows(rows) {
-  if (!rows.length) {
-    $('txBody').innerHTML = '<tr><td colspan="7" class="loading-row">No transactions found.</td></tr>';
-    return;
+// Top spending employees
+router.get('/top-employees', async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        e.empid,
+        e.Name AS employee_name,
+        d.Name AS dept_name,
+        COUNT(t.tid) AS transaction_count,
+        COALESCE(SUM(t.amount), 0) AS total_amount
+      FROM employee e
+      JOIN department d ON e.deptid = d.deptid
+      LEFT JOIN transaction t ON e.empid = t.empid
+      GROUP BY e.empid, e.Name, d.Name
+      ORDER BY total_amount DESC
+      LIMIT 10
+    `);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
+});
 
-  $('txBody').innerHTML = rows.map(r => `
-    <tr>
-      <td><span class="tid-badge">#${r.tid}</span></td>
-      <td><strong>${r.empid}</strong></td>
-      <td>${escHtml(r.employee_name)}</td>
-      <td><span class="dept-tag">${escHtml(r.dept_name)}</span></td>
-      <td><span class="cat-tag">${escHtml(r.category_name)}</span></td>
-      <td><span class="items-text" title="${escHtml(r.items)}">${escHtml(r.items?.substring(0,60))}${r.items?.length > 60 ? '...' : ''}</span></td>
-      <td class="amount-cell">${fmt(r.amount)}</td>
-    </tr>
-  `).join('');
-}
-
-function escHtml(str) {
-  if (str == null) return '';
-  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-// ===== INIT =====
-navigateTo('dashboard');
+module.exports = router;
