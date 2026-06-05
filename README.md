@@ -22,16 +22,7 @@ cd railway-admin
 npm install
 ```
 
-### 3. Configure database
-Edit `.env` with your MySQL credentials:
-```env
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=your_mysql_password
-DB_NAME=railway
-DB_PORT=3306
-PORT=3000
-```
+
 
 ### 4. Start the server
 ```bash
